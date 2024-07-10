@@ -1,0 +1,288 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from tabulate import tabulate
+from termcolor import colored
+from sklearn.preprocessing import OrdinalEncoder,OneHotEncoder, MinMaxScaler, PolynomialFeatures, StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import accuracy_score,precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier,GradientBoostingClassifier, HistGradientBoostingClassifier
+
+data = pd.read_csv('data.csv', header=None)
+pd.read_csv('data.csv', header=None) #Отображение данных
+print(data.info()) # Общая информация о наборе данных
+
+data.describe()
+data.isnull().sum()
+
+from sklearn.model_selection import train_test_split
+
+# Разделите данные на признаки (X) и целевую переменную (y)
+X = data.drop(0, axis=1)  # Удалите первый столбец с идентификаторами изображений
+y = data[0]  # Используйте первый столбец с идентификаторами изображений как целевую переменную
+
+# Разделите данные на обучающую и тестовую выборки
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Выведите размеры обучающей и тестовой выборок
+print("Размер обучающей выборки:", X_train.shape)
+print("Размер тестовой выборки:", X_test.shape)
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
+
+# Создайте словарь для хранения результатов
+results = {}
+
+# Определите модели и их параметры
+models = {
+    'SVM': (SVC(), {'C': [0.1, 1, 10], 'kernel': ['linear', 'rbf']}),
+    'KNN': (KNeighborsClassifier(), {'n_neighbors': [3, 5, 7]}),
+    'Naive Bayes': (GaussianNB(), {}),
+    'Neural Network': (MLPClassifier(), {'hidden_layer_sizes': [(50,), (100,), (200,)]})
+}
+
+# Обучите модели и оценка результов
+for name, (model, params) in models.items():
+    # Подбер лучших гиперпараметров с помощью GridSearchCV
+    grid_search = GridSearchCV(model, params, cv=5)
+    grid_search.fit(X_train, y_train)
+
+    # Получите лучшую модель с подобранными параметрами
+    best_model = grid_search.best_estimator_
+
+    # Используйте обученную модель для предсказания на тестовых данных
+    predictions = best_model.predict(X_test)
+
+    # Оцените результаты с помощью нескольких метрик
+    accuracy = accuracy_score(y_test, predictions)
+    precision = precision_score(y_test, predictions, average='macro')
+    recall = recall_score(y_test, predictions, average='macro')
+    f1 = f1_score(y_test, predictions, average='macro')
+
+    # Сохраните результаты в словаре
+    results[name] = {
+        'Accuracy': accuracy,
+        'Precision': precision,
+        'Recall': recall,
+        'F1-score': f1,
+        'Best Parameters': grid_search.best_params_
+    }
+
+import plotly.graph_objects as go
+
+# Создайте списки для метрик и моделей
+metrics = ['Accuracy', 'Precision', 'Recall', 'F1-score']
+models = list(results.keys())
+
+# Создайте графики для каждой метрики
+for metric in metrics:
+    fig = go.Figure()
+
+    # Добавьте столбцы для каждой модели с указанием параметров
+    for model in models:
+        params_str = ', '.join(f"{param}: {value}" for param, value in results[model]['Best Parameters'].items())
+        name_with_params = f"{model} ({params_str})"
+        fig.add_trace(go.Bar(
+            x=[name_with_params],
+            y=[results[model][metric]],
+            name=model,
+            hovertemplate='%{y}',
+            text=[results[model][metric]],
+            textposition='inside'
+        ))
+
+    # Настройте макет графика
+    fig.update_layout(
+        title=dict(
+            text=f"Метрика: {metric}",
+            x=0.5,
+            xanchor='center'
+        ),
+        xaxis_title='Модель (Параметры)',
+        yaxis_title='Значение',
+        legend=dict(
+            orientation='h',
+            x=0.5,
+            y=-0.15,
+            xanchor='center'
+        ),
+        margin=dict(
+            l=50,
+            r=0,
+            t=50,
+            b=50
+        ),
+        font=dict(
+            size=14
+        )
+    )
+
+    # Отобразите график
+    fig.show()
+
+
+#Резерв параметров:
+results
+
+def convert(imgf, labelf, outf, n):
+    f = open(imgf, "rb")
+    o = open(outf, "w")
+    l = open(labelf, "rb")
+
+    f.read(16)
+    l.read(8)
+    images = []
+
+    for i in range(n):
+        image = [ord(l.read(1))]
+        for j in range(28*28):
+            image.append(ord(f.read(1)))
+        images.append(image)
+
+    for image in images:
+        o.write(",".join(str(pix) for pix in image)+"\n")
+    f.close()
+    o.close()
+    l.close()
+
+convert("train-images-idx3-ubyte", "train-labels-idx1-ubyte",
+        "mnist_train.csv", число)
+
+from sklearn import datasets 
+digits = datasets.load_digits() # Цифра, будет содержать набор данных, который далее мы показываем.
+dir(digits)
+print(digits.images[0]) # вывод значения изображения в виде последовательности чисел
+
+import matplotlib.pyplot as plt
+def plot_multi(i):
+    nplots = 16
+    fig = plt.figure(figsize=(15, 15))
+    for j in range(nplots):
+        plt.subplot(4, 4, j+1)
+        plt.imshow(digits.images[i+j], cmap='binary')
+        plt.title(digits.target[i+j])
+        plt.axis('off')
+    # Вывод графиков
+    plt.show()
+
+# Вызов функции plot_multi с индексом 0
+plot_multi(0)
+
+y = digits.target
+x = digits.images.reshape((len(digits.images), -1)) # Преобразуем двумерный массив в одномерный
+x.shape # Сглаживаем и задаем форму данным
+
+x[0] # Показываем полученный одномерный массив
+x_train = x[:1000] # Самые первые 1000 фотографий которые будут использоваться при обучении
+y_train = y[:1000]
+
+x_test = x[1000:] # Оставшийся набор данных будет использован для  проверки производительности сети
+y_test = y[1000:]
+
+from sklearn.neural_network import MLPClassifier # Импорт классификатора MLP из sklearn
+mlp = MLPClassifier(hidden_layer_sizes=(15,), # вызов классификатора MLP с определенными параметрами
+                    activation='logistic',
+                    alpha=1e-4, solver='sgd',
+                    tol=1e-4, random_state=1,
+                    learning_rate_init=.1,
+                    verbose=True)
+
+mlp.fit(x_train, y_train) #Обучаем нашу модель
+ 
+# Наблюдаем зависимость итераций и потерь
+fig, axes = plt.subplots(1, 1)
+axes.plot(mlp.loss_curve_, 'o-')
+axes.set_xlabel("number of iteration")
+axes.set_ylabel("loss")
+plt.show()
+
+predictions = mlp.predict(x_test)
+predictions[:50]
+# Используя метки, будем определять точность нашей модели
+y_test[:50]
+
+from sklearn.metrics import accuracy_score # Импортируем библиотеку для определения точности нашей модели
+accuracy_score(y_test, predictions) #Определяем точность модели на тестовом датасете и выводим ее в переменную predictions
+
+from sklearn.datasets import load_digits
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import scale
+from sklearn.cluster import KMeans
+from time import time
+from sklearn import metrics
+from sklearn.decomposition import PCA
+import numpy as np
+
+digits1 = load_digits().data
+sample_digit = digits1[0].reshape(8, 8)
+plt.imshow(sample_digit)
+plt.title("Digit image")
+plt.show()
+
+scaled_data = scale(digits_data)
+print(scaled_data)
+
+Y = load_digits().target
+print(Y)
+
+k = 10
+kmeans_cluster = KMeans(init = "random",
+                        n_clusters = k,
+                        n_init = 10,
+                        random_state = 0)
+
+kmeans_cluster = KMeans(init="k-means++", n_clusters=k, n_init=10, random_state=0)
+
+def bench_k_means(estimator, name, data):
+  initial_time = time()
+  estimator.fit(data)
+  print("Initial-cluster: " + name)
+  print("Time taken: {0:0.3f}".format(time() - initial_time))
+  print("Homogeneity: {0:0.3f}".format(
+    metrics.homogeneity_score(Y, estimator.labels_)))
+  print("Completeness: {0:0.3f}".format(
+    metrics.completeness_score(Y, estimator.labels_)))
+  print("V_measure: {0:0.3f}".format(
+    metrics.v_measure_score(Y, estimator.labels_)))
+  print("Adjusted random: {0:0.3f}".format(
+    metrics.adjusted_rand_score(Y, estimator.labels_)))
+  print("Adjusted mutual info: {0:0.3f}".format(
+    metrics.adjusted_mutual_info_score(Y, estimator.labels_)))
+  print("Silhouette: {0:0.3f}".format(metrics.silhouette_score(
+    data, estimator.labels_, metric='euclidean', sample_size=300)))
+
+kmeans_cluster = KMeans(init="random", n_clusters=k, #код выполняет оценку производительности алгоритма кластеризации k-средних (KMeans) на наборе данных рукописных цифр для различных вариантов инициализации центров кластеров.
+                        n_init=10, random_state=0)
+bench_k_means(estimator=kmeans_cluster, name="random", data = digits1)
+kmeans_cluster = KMeans(init="k-means++", n_clusters=k,
+                        n_init=10, random_state=0)
+bench_k_means(estimator=kmeans_cluster, name="random", data = digits1)
+# Cокращение набора данных
+pca = PCA(2)
+reduced_data = pca.fit_transform(digits_data)
+kmeans_cluster.fit(reduced_data)
+
+# Вычисление центройда
+centroids = kmeans_cluster.cluster_centers_
+label = kmeans_cluster.fit_predict(reduced_data)
+unique_labels = np.unique(label)
+
+# Построение кластеров
+plt.figure(figsize=(8, 8))
+for i in unique_labels:
+    plt.scatter(reduced_data[label == i, 0],
+                reduced_data[label == i, 1],
+                label=i)
+plt.scatter(centroids[:, 0], centroids[:, 1],
+            marker='x', s=169, linewidths=3,
+            color='k', zorder=10)
+plt.legend()
+plt.show()
